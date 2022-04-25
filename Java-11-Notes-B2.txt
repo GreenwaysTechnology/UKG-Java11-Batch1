@@ -1,0 +1,365 @@
+				 JAVA 11 features
+..............................................................................................
+
+Road Map:
+
+1.New Programming features
+
+2.New arch,tools
+.............................................................................................
+
+Java Apps are built using many java Technology(JVM) dialects such as Java Programming language
+,Scala,Groovy,Kotlin.
+
+Java 7 Non Blocking IO API
+
+Java 8 - functional programming 
+
+what are the Principles of fp implmented inside java?
+
+1.functions are first class citizen
+   ->functions are values like strings,numbers,boolean,objects
+since function is value can be assigned to a variable.
+2.Higher order functions
+   function which accepts other functions as parameters and can return other functions
+  functions are building block for nonblocking and async arch.
+3.pure functions
+   function receives parameters which never modifity its input, returns as it is.
+ if i change input parameter,function should not do any sides  
+
+4.side effects and immutablity.
+  if function does io, or any mutations are done as part of input parameters called side effects..
+   Dont do side effects,
+
+ i want to change input parameter but i have to keep my function as pure
+   "Immutablity" -  instead of changing the input parameter memory directly, clone it and return new object.
+  
+Why fp ? what are the advantages you are getting in java 8?
+
+=>fp gives more reaability - DSL code -  dont fucus how to write , focus what you need it.
+
+ list = [4,544,3434,2]
+
+imperative
+ for(....){
+    if(filter){
+      newList.push(filterItem)
+    }
+ }
+
+pure function
+NewList = list.filter(function(){})
+.............................................................................................
+Java 9 :
+
+ Introduction of modular system
+ Reactive Streams Integration
+
+.............................................................................................
+
+Java 10 :
+  Experimental Java Based JIT Compiler - grall
+    =>Cloud Native apps / Container native apps 
+.............................................................................................
+			       Java 11
+............................................................................................
+
+Java Versioning System
+Multiple JDK options  - Oracle JDK, Open JDK
+.............................................................................................
+				Java Release Cadence
+............................................................................................
+
+In traditional java (before java 11) , Oracle used to have model on which they produced a  major version and the goal was to have a major version approximately every two years and they would support it for a long time.
+
+Java 9 - 2015-jan-----2017-jan -  two years
+
+In case if they want to add new features/changes who want to add , means who could not change the orginal specification, rather who keeps minior version
+ 
+  9.1,9.2,9.3........
+
+Until new release come , oracle need to give support.
+Minor updates were release every six months....
+
+Oracle wanted to change this version model, decided to move paid model.
+.............................................................................................
+				 Oracle JDK development model
+
+1.
+Oracle JDK binary release under BCL lic  -free for dev and paid for  production
+
+Oracle Open JDK binary release under GPL lic -  free for dev and production
+
+2.JDK to be released for every 6 months with major release  jdk 11 , 12, 13...
+  Every version we can introduce new features, bug fixing,deprecations......
+
+ The changes are happing both oracle jdk and open jdk hand in hand.
+ No changes in performance,apis, both oracle and open jdk
+
+ But this feature not available before jdk11.
+
+ Oracle jdk has live support incase if you end up any issues.
+ Open jdk has also support but it takes time to fix isssues.
+
+Why Oracle jdk is good for production?
+
+ jdk versions are keep on going 11,12,13...
+
+if your app is running on jdk 11, now we have 12,if you want to change oracle offers  support 
+ "LTS" -  Long term Support
+
+LTS support for any jdk there years
+  11 -------17
+ Only LTS support available for Oracle JDK only not for Open JDK
+
+JDK Downloads who had two models
+
+openjdk :https://openjdk.java.net/
+oraclejdk:https://www.oracle.com/java/technologies/downloads/
+.............................................................................................
+			Features which were not available in OpenJDK 9,10
+				 Now Available in OpenJDK 11
+
+1.Application class data sharing
+2.Project ZGC
+3.Flight Recorder
+4.Mission Control
+5.System Usage Loggers
+..............................................................................................
+				   Java Modular System
+..............................................................................................
+ 
+Java Module system introduced in java 9, in 11 it has been standardized
+
+What is Java Module?
+  A Java Module is a packaging mechanism that enables you to package a java apps or apis as a separate java Modules.
+ A Java Module is packaged as a modular JAR file.
+ A Java Module can specify which of the java packages it contains that should be visible to other java modules which uses this module -  scope /visibility of the packages.
+ A Java Module can have depedency which module it requires.
+
+The Module Platform Module System(JPMS) is introduced under JSR 326
+
+JCP,JSR,JEP:
+
+JCP - Java Community process
+JSR - Java Specification Requests.The formal documents that describe proposed specifications and technologies for adding to the Java platform.
+  ---It is community driven activites...
+
+JEP - JDK Enhancement Proposal
+   It is a process defined by Oracle Corporation for collecting propopals for enchancements to the JDK and Open JDK
+
+
+Why java Modules?
+
+Before Java 9,Java apps built using package model.
+
+App contains = 100 classes and depedencies(200)
+
+When you pack, you pack 100 classes + 200 dependencies and also you pack jdk libs apis which makes you bundle size larger.
+
+Old java apps carries lot of unncessary code and depdencies which is problem for cloud and container worlds.
+
+In old java applications, you cant avoid ClassNotFoundException, during runtime if you refere any class which is not part of the app.
+
+Solution : Java Modules
+
+JPMS Advantages:
+...............
+1.Smaller apps distributable via modular system, which makes real micro service development
+
+2.Encapsulation of internal packages , the module need not expose any module if you dont want.
+
+3.Startup dection of missing modules, Unlike classNotFoundException is discovered during runtime but modules missing are decected during loading itself.
+
+How to define module?
+
+ A Module contain one or more packages
+
+ A Module = {packages}
+
+Module Naming:
+  Modules are like package names -  com.ukg.airlines
+  Modules are defined using directory module - com/ukg/airlines/com.ukg.booking
+ 
+Module descriptor(module-info.java)
+
+Project Setup:
+
+1.Normal Java Project
+2.Maven Project
+
+
+Steps:
+
+1.create java project
+
+2.right click on project, create module
+
+3.create packages and classes
+  package com.mycom.greeter;
+
+public class Greeter {
+    public String sayHello(){
+        return "Hello";
+    }
+}
+4.create module-info.java
+module greeter {
+    //exports this package so that we can use outside
+    exports com.mycom.greeter;
+}
+
+4.create main module and class
+package com.ibs;
+
+import com.airbnb.services.AirlineService;
+import com.mycom.greeter.Greeter;
+
+public class App {
+    public static void main(String[] args) {
+        Greeter greeter = new Greeter();
+        System.out.println(greeter.sayHello());
+           
+    }
+}
+
+5.module.info
+module app {
+    requires  greeter;
+    requires airlines;
+}
+...........................................................................................
+				Maven Project
+...........................................................................................
+
+Steps:
+
+1.create maven project
+
+2.create module
+
+3.create package
+4.creat classes
+5.create module-info.java
+6.you expose the packages
+
+
+2.create module
+
+3.create package
+4.creat classes
+5.create module-info.java
+6.you  requires the module
+.............................................................................................
+                         How to run java apps without compiling
+...........................................................................................
+
+Any java programs need to compiled, you have to have .class files in order to run but java 11 runtime added new feature without compiling the classes you can run.
+ 
+Running Java File with single command
+One major change is that you don’t need to compile the java source file with javac tool first. You can directly run the file with java command and it implicitly compiles.
+This feature comes under JEP 330.
+
+package com.mycom;
+
+public class HelloWorld {
+    public static void main(String[] args) {
+        System.out.println("Hello");
+    }
+}
+>java11features\src>java com/mycom/HelloWorld.java
+Hello
+.............................................................................................
+				 RELP -  Read Evualte Print Loop
+............................................................................................
+  
+Java Shell Tool (JShell)
+It is an interactive Java Shell tool, it allows us to execute Java code from the shell and shows output immediately. JShell is a REPL (Read Evaluate Print Loop) tool and run from the command line.
+
+Advantages of JShell
+Jshell has reduced all the efforts that are required to run a Java program and test a business logic.
+
+If we don't use Jshell, creating of Java program involves the following steps.
+
+Open editor and write program
+Save the program
+Compile the program
+Edit if any compile time error
+Run the program
+Edit if any runtime error
+Repeat the process
+Jshell does not require above steps. We can evaluate statements, methods and classes, even can write hello program without creating class.
+
+jshell
+>jshell
+|  Welcome to JShell -- Version 11.0.11
+|  For an introduction type: /help intro
+
+jshell> int a=10;
+a ==> 10
+
+jshell> int b=20
+b ==> 20
+
+jshell> int c = a * b
+c ==> 200
+
+jshell> /exit
+|  Goodbye
+
+............................................................................................
+				Java 11 new String apis
+............................................................................................
+
+New utility methods in String class
+
+1.isBlank
+2.lines
+   Stream of lines extracted from the string.
+
+3.strip
+4.stripLeading
+5.stripTrailing
+  =>eq to trim, where these methods unicode aware
+6.repeat
+   return concatenation of the string repeated n times
+
+package com.mycom.stringapis;
+
+import java.util.stream.Collectors;
+
+public class App {
+    public static void main(String[] args) {
+        System.out.println(" ".isBlank() ? "Blank" : "Not Blank");
+        //stream creation from the Strings
+        String str = "JD\nJD\nJD";
+        str.lines().map(String::toLowerCase).collect(Collectors.toList()).forEach(System.out::println);
+
+        System.out.print("Start");
+        System.out.print(str.strip());
+        System.out.println("End");
+
+        System.out.print("Start");
+        System.out.print(str.stripLeading());
+        System.out.println("End");
+
+        System.out.print("Start");
+        System.out.print(str.stripTrailing());
+        System.out.println("End");
+        String hello = "hello".repeat(10);
+        System.out.println(hello);
+    }
+}
+.............................................................................................
+
+
+
+
+
+
+
+
+
+
+
+
