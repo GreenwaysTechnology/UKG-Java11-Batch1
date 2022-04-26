@@ -351,6 +351,592 @@ public class App {
     }
 }
 .............................................................................................
+			 Java Runtime Architecture
+............................................................................................
+
+How Java Works?
+
+Java Source Code
+    |
+ javac 
+    |
+ Byte Code
+    |
+ Excution
+
+What is Byte Code? Why Byte Code?
+
+ Byte code is code which is not os dependant- nutural code.- Assembly language specific Virtual Operating System.
+
+ Byte code cant be executed directly on os. 
+
+ Byte code need to be converted into native code.
+..............................................................................................
+		   When byte code is converted into native code?
+
+During runtime or compile time?
+   Runtime.
+.............................................................................................
+
+In java we have two compilers?
+
+1.javac
+2.AOT - A head of compilation
+
+Hello.java ---->javac Hello.java ---> Hello.class
+Hello.java ---->aot Hello.java -----> Hello.so -> Optimitized code.
+..............................................................................................
+			 How you can call JVM?
+
+HotSpot Java Virtual VM.
+
+Components of HotSpot VM:
+
+1.interpreter
+     The JVM interprets and executes bytecode at runtime
+2.Runtime Compiler - JIT -  Just in time compiler
+    Which boost the compilation of interpreter generated code into optimized code before execution.
+  
+3.Heap
+
+4.Stack
+
+5.GC
+..............................................................................................
+				 JIT Compilers
+
+JIT Compilers
+A JIT compiler compiles bytecode to native code for frequently executed sections. These sections are called "hotspots", hence the name "Hotspot JVM". As a result, Java can run with similar performance to a fully compiled language. 
+
+Let's look at the two types of JIT compilers available in the JVM.
+
+JDK has two folders 
+
+1.client folder -  In order to run simple java apps
+2.server folder -  In order to run enterprise java apps
+
+
+1.C1 Compiler
+2.C2 Compiler
+
+Note:  Java 10 onwards, HOTSPOT introduced new Compiler technology via  JEP JVMCI -(Java Virtual Machine Compiler Interface).
+ As part of this spec oracle started developing the compiler called "Graal Compiler"
+
+
+C1 – Client Complier
+....................
+   The client compiler, also called C1, is a type of a JIT compiler optimized for faster start-up time. It tries to optimize and compile the code as soon as possible.
+
+Historically, we used C1 for short-lived applications and applications where start-up time was an important non-functional requirement. Prior to Java 8, we had to specify the -client flag to use the C1 compiler. However, if we use Java 8 or higher, this flag will have no effect.
+
+only for java 7 .
+ java -client  Hello --> JVM selects C1 as JIT Compiler
+
+C2 – Server Complier:
+....................
+
+  The server compiler, also called C2, is a type of a JIT compiler optimized for better overall performance. C2 observes and analyzes the code over a longer period of time compared to C1. This allows C2 to make better optimizations in the compiled code.
+
+Historically, we used C2 for long-running server-side applications. Prior to Java 8, we had to specify the -server flag to use the C2 compiler. However, this flag will have no effect in Java 8 or higher.
+
+We should note that the "Graal JIT compiler is also available since Java 10", as an alternative to C2. Unlike C2, Graal can run in both just-in-time and ahead-of-time compilation modes to produce native code.
+
+..............................................................................................
+				Mixing compilers for better performance
+					 Tiered Compilation
+...............................................................................................
+Tiered Compilation:
+
+The C2 compiler often takes more time and consumes more memory to compile the same methods. However, it generates better-optimized native code than that produced by C1.
+
+The tiered compilation concept was first introduced in Java 7. Its goal was to use a mix of C1 and C2 compilers in order to achieve both fast startup and good long-term performance.
+
+
+Best of Both Worlds:
+
+On application startup, the JVM initially interprets all bytecode and collects profiling information about it.
+
+The JIT compiler then makes use of the collected profiling information to find hotspots.
+
+First, the JIT compiler compiles the frequently executed sections of code with C1 to quickly reach native code performance. 
+Later, C2 kicks in when more profiling information is available. C2 recompiles the code with more aggressive and time-consuming optimizations to boost performance
+
+	"C1 Improves performance faster, while c2 makes better performance improvments"
+
+Accurate Profiling:
+
+An additional benefit of tiered compilation is more accurate profiling information. Before tiered compilation, the JVM collected profiling information only during interpretation.
+
+With tiered compilation enabled, the JVM also collects profiling information on the C1 compiled code. Since the compiled code achieves better performance, it allows the JVM to collect more profiling samples.
+
+Code Cache:
+	Code cache is a memory area where the JVM stores all bytecode compiled into native code. Tiered compilation increased the amount of code that needs to be cached up to four times.
+
+Deoptimization:
+  Even though c2 compiled code is highly optimized and long-lived.
+  It can be deoptimized. As a result , the JVM Would temporariy reset to interpreration cycle.
+  
+  Deoptimization happens when the compiler's "optimistics assumptions are proven wrong"
+  
+...
+
+Compilation Levels:
+..................
+
+level 0 – Interpreted Code
+Initially, JVM interprets all Java code. During this initial phase, the performance is usually not as good compared to compiled languages.
+
+However, the JIT compiler kicks in after the warmup phase and compiles the hot code at runtime. The JIT compiler makes use of the profiling information collected on this level to perform optimizations.
+
+ Level 1 – Simple C1 Compiled Code
+On this level, the JVM compiles the code using the C1 compiler, but without collecting any profiling information. The JVM uses level 1 for methods that are considered trivial.
+
+Due to low method complexity, the C2 compilation wouldn't make it faster. Thus, the JVM concludes that there is no point in collecting profiling information for code that cannot be optimized further.
+
+Level 2 – Limited C1 Compiled Code
+On level 2, the JVM compiles the code using the C1 compiler with light profiling. The JVM uses this level when the C2 queue is full. The goal is to compile the code as soon as possible to improve performance.
+
+Later, the JVM recompiles the code on level 3, using full profiling. Finally, once the C2 queue is less busy, the JVM recompiles it on level 4.
+
+Level 3 – Full C1 Compiled Code
+On level 3, the JVM compiles the code using the C1 compiler with full profiling. Level 3 is part of the default compilation path. Thus, the JVM uses it in all cases except for trivial methods or when compiler queues are full.
+
+The most common scenario in JIT compilation is that the interpreted code jumps directly from level 0 to level 3.
+
+Level 4 – C2 Compiled Code
+On this level, the JVM compiles the code using the C2 compiler for maximum long-term performance. Level 4 is also a part of the default compilation path. The JVM uses this level to compile all methods except trivial ones.
+
+Given that level 4 code is considered fully optimized, the JVM stops collecting profiling information. However, it may decide to deoptimize the code and send it back to level 0.
+
+Disabling Tiered Compilation
+We may disable tiered compilation by setting the –XX:-TieredCompilation flag. When we set this flag, the JVM will not transition between compilation levels. As a result, we'll need to select which JIT compiler to use: C1 or C2.
+............................................................................................
+				 Graal Compiler
+...........................................................................................
+
+What is Graal?
+ Graal is just a Compiler,JVM Just In Time Compiler
+ Graal replaces old "C2" Compiler
+ Developed by Oracle
+ Uses JVMCI(JEP 243)
+ Written in Java itself
+   =>Where as C1 and C2 is written in  "C++"
+
+JEP 243: Java-Level JVM Compiler Interface
+...........................................
+
+https://openjdk.java.net/jeps/243
+
+Develop a Java based JVM compiler interface (JVMCI) enabling a compiler written in Java to be used by the JVM as a dynamic compiler.
+
+Goals:
+ To plug in any  JIT Compiler based on JVMCI spec.
+
+In future , any body can develop compilers for JVM.
+
+The "Graal" is the first implementation compiler based JVMCI.
+
+JDK 11 has shipped JVMCI interface apis
+
+
+What is Graalvm?
+
+GraalVM is umberla Term which basically consist of three technology
+
+1.Graal is JIT Compiler
+2.Truffle Framework -GraalVM’s language implementation framework
+3.Native Image – a technology to compile an application ahead-of-time into a native executable.
+
+AOT - Ahead of Compilation. - JEP 295
+ Compile Java classes to native code prior to launching the virtual machine.
+Improve the start-up time of both small and large Java applications, with at most a limited impact on peak performance.
+...........................................................................................
+                                 Lab 				
+
+
+1.How to understand that JDK supports graal compiler or JVMCI?
+
+jdk.internal.vm:
+  It is a module  which provides JVMCI compiler interface and graal compiler
+
+java --list-modules | grep jdk.internal.vm
+
+jdk.internal.vm.ci@11.0.11
+jdk.internal.vm.compiler@11.0.11
+jdk.internal.vm.compiler.management@11.0.11
+
+...........................................................................................
+
+2.By default, Graal compiler is not enabled, still c1 and c2 compiler only enabled?
+  The reason because still "Graal" is not stable under experimental mode.
+
+if you want to reset jvm default behaviours, we can reset via parameters.
+
+
+JVM options:
+............
+
+Options that begin with -X are non-standard (not guaranteed to be supported on all VM implementations), and are subject to change without notice in subsequent releases of the JDK.
+Options that are specified with -XX are not stable and are subject to change without notice.
+
+Some Useful -XX Options
+Default values are listed for Java SE 6 for Solaris Sparc with -server. Some options may vary per architecture/OS/JVM version. Platforms with a differing default value are listed in the description.
+
+Boolean options are turned on with -XX:+<option> and turned off with -XX:-<option>.
+Disa
+Numeric options are set with -XX:<option>=<number>. Numbers can include 'm' or 'M' for megabytes, 'k' or 'K' for kilobytes, and 'g' or 'G' for gigabytes (for example, 32k is the same as 32768).
+
+
+String options are set with -XX:<option>=<string>, are usually used to specify a file, a path, or a list of commands
+...........................................................................................
+
+How to pass jvm parameters?
+
+In line Parameters
+
+  java -XX:+<option> -XX:+<option> -XX:+<option> YourApp
+
+Via Global env variables
+  JVM / JAVA OPTIONS - Commandline Parameters:
+............................................
+
+setting parameters via env variables
+
+export JAVA_OPTS=foobar
+export JAVA_TOOL_OPTIONS= 
+export _JAVA_OPTIONS="-Xmx512m -Xms64m"
+
+There is one more difference: 
+_JAVA_OPTIONS is Oracle specific. IBM JVM is using IBM_JAVA_OPTIONS instead. This was probably done to be able to define machine-specific options without collisions. JAVA_TOOL_OPTIONS is recognized by all VMs.
+
+
+
+
+In order enable Grall compiler we need to set some of the JVM parameters(options)
+
+=>Heap Memory
+  "Graal is just java Application" , when jvm bootstrap, Graal need to be loaded into heap first , in order to load graal we need some heap memory.
+
+
+java --version
+java 11.0.11 2021-04-20 LTS
+Java(TM) SE Runtime Environment 18.9 (build 11.0.11+9-LTS-194)
+Java HotSpot(TM) 64-Bit Server VM 18.9 (build 11.0.11+9-LTS-194, mixed mode)
+
+
+SETTING Java Options:
+
+-XX:-UseParallelGC
+-Xmx512m   - setting max heap size
+-Xms512m   - setting inital heap size
+
+SET JAVA_TOOL_OPTIONS="-XX:-UseParallelGC -Xmx512m -Xms512m"
+export JAVA_TOOL_OPTIONS="-XX:-UseParallelGC -Xmx512m -Xms512m"
+
+ java --version
+Picked up JAVA_TOOL_OPTIONS: -XX:-UseParallelGC -Xmx512m -Xms512m
+java 11.0.11 2021-04-20 LTS
+Java(TM) SE Runtime Environment 18.9 (build 11.0.11+9-LTS-194)
+Java HotSpot(TM) 64-Bit Server VM 18.9 (build 11.0.11+9-LTS-194, mixed mode)
+
+How to enable Graal? -  GET A JDK With Graal
+
+if you are able to see this , you are using -jdk.internal.vm.compiler@11.0.11
+
+-XX:+UnlockExperimentalVMOptions  - Enable all experimentalVM Options since graal is experimental.
+-XX:+EnableJVMCI  - Enable JVM Compiler Interface to hook into Compiler selection
+-XX:+UseJVMCICompiler
+
+export JAVA_TOOL_OPTIONS="-XX:-UseParallelGC -Xmx512m -Xms512m -XX:+UnlockExperimentalVMOptions -XX:+EnableJVMCI -XX:+UseJVMCICompiler "
+
+java --list-modules | grep jdk.internal.vm                                                             Picked up JAVA_TOOL_OPTIONS: -XX:-UseParallelGC -Xmx512m -Xms512m -XX:+UnlockExperimentalVMOptions -XX:+EnableJVMCI -XX:+UseJVMCICompiler
+jdk.internal.vm.ci@11.0.11
+jdk.internal.vm.compiler@11.0.11
+jdk.internal.vm.compiler.management@11.0.11
+
+java --version
+Picked up JAVA_TOOL_OPTIONS: -XX:-UseParallelGC -Xmx512m -Xms512m -XX:+UnlockExperimentalVMOptions -XX:+EnableJVMCI -XX:+UseJVMCICompiler
+java 11.0.11 2021-04-20 LTS
+Java(TM) SE Runtime Environment 18.9 (build 11.0.11+9-LTS-194)
+Java HotSpot(TM) 64-Bit Server VM 18.9 (build 11.0.11+9-LTS-194, mixed mode)
+
+..............................................................................................
+bool EnableJVMCI                              = true                           {JVMCI experimental} {environment}
+
+ java -XX:+PrintFlagsFinal --version | grep JVMCI
+Picked up JAVA_TOOL_OPTIONS: -XX:-UseParallelGC -Xmx512m -Xms512m -XX:+UnlockExperimentalVMOptions -XX:+EnableJVMCI -XX:+UseJVMCICompiler
+     bool BootstrapJVMCI                           = false                          {JVMCI experimental} {default}
+     bool EagerJVMCI                               = false                          {JVMCI experimental} {default}
+     bool EnableJVMCI                              = true                           {JVMCI experimental} {environment}
+     bool EnableJVMCIProduct                       = false                          {JVMCI experimental} {default}
+     intx JVMCICounterSize                         = 0                              {JVMCI experimental} {default}
+     bool JVMCICountersExcludeCompiler             = true                           {JVMCI experimental} {default}
+     intx JVMCIEventLogLevel                       = 1                              {JVMCI experimental} {default}
+     intx JVMCIHostThreads                         = 1                              {JVMCI experimental} {default}
+    ccstr JVMCILibDumpJNIConfig                    =                                {JVMCI experimental} {default}
+    ccstr JVMCILibPath                             =                                {JVMCI experimental} {default}
+     intx JVMCINMethodSizeLimit                    = 655360                         {JVMCI experimental} {default}
+     bool JVMCIPrintProperties                     = false                          {JVMCI experimental} {default}
+     intx JVMCIThreads                             = 1                              {JVMCI experimental} {default}
+     intx JVMCITraceLevel                          = 0                              {JVMCI experimental} {default}
+     bool PrintBootstrap                           = true                           {JVMCI experimental} {default}
+     bool UseJVMCICompiler                         = true                           {JVMCI experimental} {environment}
+     bool UseJVMCINativeLibrary                    = false                          {JVMCI experimental} {default}
+
+...........................................................................................
+
+How to know Compiler default values and also values?
+
+java -XX:+JVMCIPrintProperties :
+
+Picked up JAVA_TOOL_OPTIONS: -XX:-UseParallelGC -Xmx512m -Xms512m -XX:+UnlockExperimentalVMOptions -XX:+EnableJVMCI -XX:+UseJVMCICompiler
+[JVMCI properties]
+jvmci.Compiler = null                                                     [String]
+          Selects the system compiler. This must match the getCompilerName() value returned by a jdk.vm.ci.runtime.JVMCICompilerFactory provider. An empty string or the value "null" selects a compiler that will raise an exception upon receiving a compilation request.
+jvmci.InitTimer = false                                                  [Boolean]
+          Specifies if initialization timing is enabled.
+jvmci.PrintConfig = false                                                [Boolean]
+          Prints VM configuration available via JVMCI.
+jvmci.AuditHandles = false                                               [Boolean]
+          Record stack trace along with scoped foreign object reference wrappers to debug issue with a wrapper being used after its scope has closed.
+jvmci.TraceMethodDataFilter = null                                        [String]
+          Enables tracing of profiling info when read by JVMCI.
+          Empty value: trace all methods
+          Non-empty value: trace methods whose fully qualified name contains the value.
+jvmci.UseProfilingInformation = true 
+
+............................................................................................
+				When and How graal compiler is bootstraped
+...........................................................................................
+
+Graal itself is java code, it needs to be initalized.
+
+Interperter kicks start converting code into native (in cluding graal) With Profiling,C1 compiler kicks start with profile.
+
+Graal is lazy and also async, grall is initalized via a separate of thread of execution called graal threads like gc threads.
+
+How to know tiered compilation:
+
+-X:+PrintCompilation => will log compiler activities
+
+java -Djvmci.InitTimer=true  -XX:+PrintCompilation --version
+
+java -Djvmci.InitTimer=true  -XX:+PrintCompilation --version
+
+Picked up JAVA_TOOL_OPTIONS: -XX:-UseParallelGC -Xmx512m -Xms512m -XX:+UnlockExperimentalVMOptions -XX:+EnableJVMCI -XX:+UseJVMCICompiler
+     47    1       3       java.lang.StringLatin1::hashCode (42 bytes)
+     47    2       3       java.lang.Object::<init> (1 bytes)
+     48    3       3       java.lang.String::isLatin1 (19 bytes)
+     50    4       3       java.lang.String::hashCode (49 bytes)
+     51    5       3       java.lang.String::coder (15 bytes)
+     51    6       3       java.lang.Math::floorMod (10 bytes)
+     51    7       3       java.util.ImmutableCollections$SetN::probe (56 bytes)
+     51    8       3       java.lang.Math::floorDiv (22 bytes)
+     51    9       3       java.lang.String::equals (65 bytes)
+     51   10       3       java.lang.StringLatin1::equals (36 bytes)
+     52   11       3       java.util.ImmutableCollections$SetN::hashCode (46 bytes)
+     52   12       3       java.util.Objects::equals (23 bytes)
+     52   13       3       java.util.ImmutableCollections::emptySet (4 bytes)
+     52   14       3       java.util.Objects::requireNonNull (1)
+
+here 3 column is level(tier) - level 4 is Graal.
+
+ if you dont see 4 means , Grall is not initalized.
+
+.............................................................................................
+
+java -Djvmci.InitTimer=true HelloWorld
+Picked up JAVA_TOOL_OPTIONS: -XX:-UseParallelGC -Xmx512m -Xms512m -XX:+UnlockExperimentalVMOptions -XX:+EnableJVMCI -XX:+UseJVMCICompiler
+INITIALIZING THREAD: Thread[JVMCI CompilerThread0,9,system]
+START: HotSpotJVMCIRuntime.<init>
+START:   CompilerToVM.registerNatives
+ DONE:   CompilerToVM.registerNatives [1 ms]
+START:   HotSpotVMConfig<init>
+START:     CompilerToVm readConfiguration
+ DONE:     CompilerToVm readConfiguration [1 ms]
+START:     HotSpotVMConfigStore<init> fill maps
+ DONE:     HotSpotVMConfigStore<init> fill maps [0 ms]
+ DONE:   HotSpotVMConfig<init> [2 ms]
+START:   find factory:amd64
+ DONE:   find factory:amd64 [2 ms]
+START:   create JVMCI backend:amd64
+START:     create providers
+START:       create MetaAccess provider
+ DONE:       create MetaAccess provider [1 ms]
+START:       create RegisterConfig
+ DONE:       create RegisterConfig [0 ms]
+START:       create CodeCache provider
+ DONE:       create CodeCache provider [0 ms]
+START:       create ConstantReflection provider
+ DONE:       create ConstantReflection provider [0 ms]
+START:       create StackIntrospection provider
+ DONE:       create StackIntrospection provider [0 ms]
+ DONE:     create providers [2 ms]
+START:     instantiate backend
+ DONE:     instantiate backend [0 ms]
+ DONE:   create JVMCI backend:amd64 [3 ms]
+START:   InitializeOptions
+ DONE:   InitializeOptions [1 ms]
+ DONE: HotSpotJVMCIRuntime.<init> [25 ms]
+INITIALIZING THREAD: Thread[JVMCI CompilerThread0,9,system]
+START: CompilerConfigurationFactory.selectFactory
+ DONE: CompilerConfigurationFactory.selectFactory [2 ms]
+INITIALIZING THREAD: Thread[JVMCI CompilerThread0,9,system]
+START: HotSpotGraalRuntime.<init>
+START:   HotSpotBackendFactory.register
+ DONE:   HotSpotBackendFactory.register [9 ms]
+START:   create backend:amd64
+START:     create providers
+START:       create HotSpotRegisters provider
+ DONE:       create HotSpotRegisters provider [1 ms]
+START:       create NativeABICallerSaveRegisters
+ DONE:       create NativeABICallerSaveRegisters [0 ms]
+START:       create WordTypes
+ DONE:       create WordTypes [4 ms]
+START:       create ForeignCalls provider
+ DONE:       create ForeignCalls provider [4 ms]
+START:       create Lowerer provider
+ DONE:       create Lowerer provider [44 ms]
+START:       create stamp provider
+ DONE:       create stamp provider [0 ms]
+START:       create GC provider
+ DONE:       create GC provider [1 ms]
+START:       create SnippetReflection provider
+ DONE:       create SnippetReflection provider [0 ms]
+START:       create Bytecode provider
+ DONE:       create Bytecode provider [1 ms]
+START:       create Replacements provider
+ DONE:       create Replacements provider [6 ms]
+START:       create GraphBuilderPhase plugins
+ DONE:       create GraphBuilderPhase plugins [9 ms]
+START:       create Suites provider
+ DONE:       create Suites provider [3 ms]
+ DONE:     create providers [75 ms]
+START:     instantiate backend
+ DONE:     instantiate backend [4 ms]
+ DONE:   create backend:amd64 [80 ms]
+START:   AMD64.completeInitialization
+START:     foreignCalls.initialize
+ DONE:     foreignCalls.initialize [20 ms]
+START:     lowerer.initialize
+ DONE:     lowerer.initialize [41 ms]
+ DONE:   AMD64.completeInitialization [61 ms]
+ DONE: HotSpotGraalRuntime.<init> [180 ms]
+Hello Grall
+..........................................................................................
+
+What is bootstraping?
+
+ Graal is just another java application running in your JVM.
+ 1.it loads java classes
+ 2.Has java methods
+   which needs to be compiled obivously.
+
+Graal uses Heap Memory
+Most grall usage at start up
+ Usually when application  isn't fully  up yet.
+Memory is used anyway
+Either Malloc or heap.
+
+-XX:+BootstrapJVMCI
+
+ java -XX:+BootstrapJVMCI --version
+Picked up JAVA_TOOL_OPTIONS: -XX:-UseParallelGC -Xmx512m -Xms512m -XX:+UnlockExperimentalVMOptions -XX:+EnableJVMCI -XX:+UseJVMCICompiler
+Bootstrapping JVMCI.............................. in 6471 ms (compiled 3003 methods)
+java 11.0.11 2021-04-20 LTS
+Java(TM) SE Runtime Environment 18.9 (build 11.0.11+9-LTS-194)
+Java HotSpot(TM) 64-Bit Server VM 18.9 (build 11.0.11+9-LTS-194, mixed mode)
+
+Note: dont try this in production. Use only for testing purpose.
+.............................................................................................
+				Heap Memory and Graal Compiler
+............................................................................................
+java -Xlog:gc -Djvmci.InitTimer=true  HelloWorld
+Picked up JAVA_TOOL_OPTIONS: -XX:-UseParallelGC -Xmx512m -Xms512m -XX:+UnlockExperimentalVMOptions -XX:+EnableJVMCI -XX:+UseJVMCICompiler
+[0.019s][info][gc] Using G1
+INITIALIZING THREAD: Thread[JVMCI CompilerThread0,9,system]
+START: HotSpotJVMCIRuntime.<init>
+START:   CompilerToVM.registerNatives
+ DONE:   CompilerToVM.registerNatives [0 ms]
+START:   HotSpotVMConfig<init>
+START:     CompilerToVm readConfiguration
+ DONE:     CompilerToVm readConfiguration [1 ms]
+START:     HotSpotVMConfigStore<init> fill maps
+ DONE:     HotSpotVMConfigStore<init> fill maps [1 ms]
+ DONE:   HotSpotVMConfig<init> [3 ms]
+START:   find factory:amd64
+ DONE:   find factory:amd64 [2 ms]
+START:   create JVMCI backend:amd64
+START:     create providers
+START:       create MetaAccess provider
+ DONE:       create MetaAccess provider [0 ms]
+START:       create RegisterConfig
+ DONE:       create RegisterConfig [1 ms]
+START:       create CodeCache provider
+ DONE:       create CodeCache provider [0 ms]
+START:       create ConstantReflection provider
+ DONE:       create ConstantReflection provider [1 ms]
+START:       create StackIntrospection provider
+ DONE:       create StackIntrospection provider [0 ms]
+ DONE:     create providers [2 ms]
+START:     instantiate backend
+ DONE:     instantiate backend [0 ms]
+ DONE:   create JVMCI backend:amd64 [3 ms]
+START:   InitializeOptions
+ DONE:   InitializeOptions [1 ms]
+ DONE: HotSpotJVMCIRuntime.<init> [23 ms]
+INITIALIZING THREAD: Thread[JVMCI CompilerThread0,9,system]
+START: CompilerConfigurationFactory.selectFactory
+ DONE: CompilerConfigurationFactory.selectFactory [4 ms]
+INITIALIZING THREAD: Thread[JVMCI CompilerThread0,9,system]
+START: HotSpotGraalRuntime.<init>
+START:   HotSpotBackendFactory.register
+ DONE:   HotSpotBackendFactory.register [8 ms]
+START:   create backend:amd64
+START:     create providers
+START:       create HotSpotRegisters provider
+ DONE:       create HotSpotRegisters provider [0 ms]
+START:       create NativeABICallerSaveRegisters
+ DONE:       create NativeABICallerSaveRegisters [0 ms]
+START:       create WordTypes
+ DONE:       create WordTypes [5 ms]
+START:       create ForeignCalls provider
+ DONE:       create ForeignCalls provider [4 ms]
+START:       create Lowerer provider
+ DONE:       create Lowerer provider [45 ms]
+START:       create stamp provider
+ DONE:       create stamp provider [0 ms]
+START:       create GC provider
+ DONE:       create GC provider [1 ms]
+START:       create SnippetReflection provider
+ DONE:       create SnippetReflection provider [0 ms]
+START:       create Bytecode provider
+ DONE:       create Bytecode provider [0 ms]
+START:       create Replacements provider
+ DONE:       create Replacements provider [6 ms]
+START:       create GraphBuilderPhase plugins
+ DONE:       create GraphBuilderPhase plugins [7 ms]
+START:       create Suites provider
+ DONE:       create Suites provider [3 ms]
+ DONE:     create providers [74 ms]
+START:     instantiate backend
+ DONE:     instantiate backend [4 ms]
+ DONE:   create backend:amd64 [79 ms]
+START:   AMD64.completeInitialization
+START:     foreignCalls.initialize
+ DONE:     foreignCalls.initialize [16 ms]
+START:     lowerer.initialize
+ DONE:     lowerer.initialize [34 ms]
+ DONE:   AMD64.completeInitialization [50 ms]
+ DONE: HotSpotGraalRuntime.<init> [169 ms]
+[0.589s][info][gc] GC(0) Pause Young (Concurrent Start) (Metadata GC Threshold) 15M->3M(512M) 5.508ms
+[0.589s][info][gc] GC(1) Concurrent Cycle
+[0.593s][info][gc] GC(1) Pause Remark 5M->5M(512M) 1.121ms
+[0.593s][info][gc] GC(1) Pause Cleanup 5M->5M(512M) 0.125ms
+[0.593s][info][gc] GC(1) Concurrent Cycle 4.218ms
+Hello Grall
+............................................................................................
+
 
 
 
