@@ -1085,7 +1085,7 @@ var list = new ArrayList<Integer>();
 //        var myLambda = () -> System.out.println("do Stuff lambda");
 //        myLambda.doStuff();
 ........................................................................................
-				Local-Variable Syntax for Lambda Parameters:
+			Local-Variable Syntax for Lambda Parameters
 
 Local-Variable Syntax for Lambda Parameters is the only language feature release in Java 11.
 In Java 10, Local Variable Type Inference was introduced. Thus we could infer the type of the variable from the RHS – var list = new ArrayList<String>();
@@ -1397,11 +1397,230 @@ public class NestMain {
     }
 }
 .............................................................................................
-		      Performance Related Tools - Java Flight Recorder - JFR 
-                                JDK Mission Control - UI for JRF
-
-		          Java 11 Garbage Collector - ZGC
+		               Java Garbage Collection
 ..............................................................................................
+
+What is Garbage Collection?
+
+ A Garbage Collection is a mechanism that provides automatic memory management.
+
+Memory Management can be done in two ways
+1.manual
+   Via code,you have to write mememory management code.
+2.automation
+   The process will run a program, to destroy un wanted memory.
+
+Every Process has memory segements.
+
+1.heap
+   dynmic memory needed by application.
+2.stack
+   
+3.code segement
+
+class Hello {
+  void hello(){
+      10 + 10
+  }
+}
+Hello  h = new Hello()
+h.hello()==> pushed into stack==>will Allocate memory for a method=>Stack Frame(Runtime representation of method)
+
+Heap Segment:
+ Dynamic Memory, on demand is created, no demand means you have to destroy - Garbage Collection.
+
+What is GC?
+ It is program which watches Heap memory and destroy unwanted memory.
+
+How to decided used memory and un used Memory?
+
+In order to understand that JVM  divides the Heap into various parts
+
+They use model called generations
+
+What is the Young generation?
+What is the Old generation?
+What is the Permanent generation?
+
+
+Young Generation:
+  All newly created objects
+
+Young itself has two segements
+ -Eden
+    where all objects are put when they are new
+ -Survivor
+    After each cycle of garbage collection, all  objects that remain in the Eden
+  Partition are moved to the Survior Partition.
+
+Old Generation
+  This pool basically contains tenured and virtual (reserved) space and will be holding those objects which survived after garbage collection from Young Generation - All long lived objects
+
+Tenured Space: 
+    This memory pool contains objects which survived after multiple garbage collection means object which survived after garbage collection from Survivor space.
+
+Permanent Generation :
+   This memory pool as name also says contain permanent class metadata and descriptors information so PermGen space always reserved for classes and those that is tied to the classes for example static members
+...........................................................................................
+				Types of Garbage Collectors
+............................................................................................
+
+Garbage Collector is a program which is embeded inside jvm.
+GC  is written in c or c++ , java
+GC scans Heap periodically based on various conditions.
+GC is run by a thread or threads - GC Threads which are JVM built in threads.
+
+GC since it  is program HOT Spot JVM offers many programs
+
+1.Serial Garbage Collector
+2.Parallel Garbage Collector
+3.Garbage-First(G1) Collector
+4.Concurrent Mark Sweep(CMS) Garbage Collector
+....Java 11........
+5.Z Collector  - GZC
+6.Epsilon: A No-Op Garbage Collector
+..............................................................................................
+				Selecting Collectors
+
+Which one i need?
+
+JVM offers many GC to meet different application needs. You need to select Right GC for your app.
+
+There are three criteria
+
+1.Throughput:
+	The Percentage of total time spent in usefull application activity vs memory allocation and GC.
+     If throughput is 95% that means the application code is running 95% of the time and GC is running 5% => you need higher throughput for any high-load.
+
+2.Latency:
+   App responsiveness , which is affected by GC pauses,if you want the lowest possible latency
+
+  if GC runs, which pauses /freeze/stops the app during that time lets say 1 ms GC running, app will be unresponsive 
+    
+3.FootPrint:
+     The working set of a process , measured in pages and cache lines
+
+Different users and apps require different needs, some one want higher throuhtput and who bear latency
+
+Serial Garbage Collector
+  Serial Garbage collector is well-matched for single-threaded environments.
+ It uses the only thread for garbage collection. It works by holding all the threads of an application. It means that threads of the application freeze by the serial garbage collector during the garbage collection process and the process is known as stop the world event. Avoid the use of serial GC in the server environment. 
+
+We can use it for simple programs. If you want to use the serial garbage collector, execute the -XX:+UseSerialGC JVM argument to activate it.
+  
+Parallel Garbage Collector : Throughput collector does not care about latency
+
+   Parallel Garbage Collector is the default GC used by the JVM. 
+
+   The working of the parallel garbage collector is the same as the serial garbage collector. 
+he only difference between serial and parallel garbage collector is that serial garbage collector uses a single thread for garbage collection process while the parallel garbage collector uses multiple threads for the garbage collection.
+
+  Parallel GC can use multiple CPUs to speed up the application throughput. So, it is also known as throughput collector. 
+
+   It is used if we want to execute a long process (like batch processing) and where long pauses are acceptable.
+    If you want to use the parallel garbage collector, execute the -XX:+UseParallelGC JVM argument to activate it.
+
+
+
+CMS Garbage Collector
+........................
+
+   The Concurrent Mark Sweep (CMS) implementation uses multiple garbage collector threads for garbage collection. It's designed for applications that prefer shorter garbage collection pauses, and can afford to share processor resources with the garbage collector while the application is running.
+
+Simply put, applications using this type of GC respond slower on average, but don't stop responding to perform garbage collection.
+
+A quick point to note here is that since this GC is concurrent, an invocation of explicit garbage collection, such as using System.gc() while the concurrent process is working, will result in Concurrent Mode Failure / Interruption.
+
+If more than 98% of the total time is spent in CMS garbage collection, and less than 2% of the heap is recovered, then an OutOfMemoryError is thrown by the CMS collector. If necessary, we can disable this feature by adding the option -XX:-UseGCOverheadLimit to the command line.
+
+This collector also has a mode known as an incremental mode, which is being deprecated in Java SE 8 and may be removed in a future major release.
+
+
+G1 Garbage Collector:
+
+  G1 (Garbage First) Garbage Collector is designed for applications running on multi-processor machines with large memory space. It's available from the JDK7 Update 4 and in later releases.
+
+G1 collector will replace the CMS collector, since it's more performance efficient.
+
+Unlike other collectors, the G1 collector partitions the heap into a set of equal-sized heap regions, each a contiguous range of virtual memory. When performing garbage collections, G1 shows a concurrent global marking phase (i.e. phase 1, known as Marking) to determine the liveness of objects throughout the heap.
+
+After the mark phase is complete, G1 knows which regions are mostly empty. It collects in these areas first, which usually yields a significant amount of free space (i.e. phase 2, known as Sweeping). That's why this method of garbage collection is called Garbage-First.
+.......................................................................................
+				Z Garbage Collector
+			    (low latency and High throughput)
+
+The Z Garbage Collector, also known as ZGC, is a scalable low-latency garbage collector
+
+
+GC pause times should not exceed 10ms
+Handle heaps ranging from relatively small (a few hundreds of megabytes) to very large (many terabytes) in size
+No more than 15% application throughput reduction compared to using G1
+Lay a foundation for future GC features and optimizations leveraging colored pointers and load barriers
+Initially supported platform: Linux/x64
+.............................................................................................
+		          Epsilon: A No-Op Garbage Collector			............................................................................................
+A no op (or no-op), for no operation , is a computer instruction that takes up a small amount of space but specifies no operation.
+
+Epsilon does not do any memory reallocation.
+
+Use cases : 
+1.Performance testing
+2.VM interface testing
+etc....
+..............................................................................................
+				  Demo
+.............................................................................................
+
+Java 11 - ZGC:
+
+-Works only in Linux amd 64 bit
+-Does not work with JVMCI
+-Still it is in Experimental mode
+
+$java -Xlog:gc* -XX:+UnlockExperimentalVMOptions   -XX:-EnableJVMCI -XX:+UseZGC   MemoryLeak
+
+Eplsion:
+$java -Xlog:gc* -XX:+UnlockExperimentalVMOptions   -XX:-EnableJVMCI  -XX:+UseEpsilonGC    MemoryLeak
+
+Java 11 Default GC : G1
+
+$java -Xlog:gc*     MemoryLeak
+
+[0.004s][info][gc,heap] Heap region size: 2M
+[0.009s][info][gc     ] Using G1
+
+Note:
+  Other GCs you can plugin based on your need.
+ 
+ -XX:+UseGCC
+.............................................................................................
+				Monitoring Java Apps
+				    With
+                                (Java Flight Recorder)
+..............................................................................................
+JFR is perfomance and monitoring,tooling app.
+
+JFR collects
+ -Heap information
+ -Thread information
+ -IO information
+ -CUP infomation
+ 
+JFR was introduced in JDK 7, With Commericial but in JDK 11 on wards, it is free tool.
+
+JFR collects data and stores in the file called "filename.jfr"
+
+Having this file , we cant do any thing, We need a tool to analysis 
+...............................................................................
+			JDK Mission Control			
+	
+JDK Mission Control (JMC) is an advanced set of tools for managing, monitoring, profiling, and troubleshooting Java applications.
+
+JFR Records JVM and java apps activitity , JMC Dignanois the Recorded information.
+
+
+
+
 
 
 
